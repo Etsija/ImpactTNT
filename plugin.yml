@@ -1,0 +1,9 @@
+name: ImpactTNT
+main: com.github.etsija.impacttnt.ImpactTNT
+version: 0.2
+depend: [BKCommonLib]
+commands:
+    impact:
+        description: This command sets TNT to "impact" mode and back to normal mode
+        usage: /impact on -> "impact" mode, /impact off -> back to normal mode
+        
