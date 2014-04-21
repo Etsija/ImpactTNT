@@ -1,0 +1,5 @@
+general:
+  explodeonimpact: true
+  safetyradius: 10
+  fuseticks: 100
+  explosionradius: 5
