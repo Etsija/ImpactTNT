@@ -39,7 +39,10 @@ public class ImpactTNTPlayerListener implements Listener {
 		Entity entity = null;
 		
 		boolean perms = player.isOp() || player.hasPermission("impacttnt.throw");
-		if(perms && event.getMaterial() == Material.TNT && event.getAction() == Action.LEFT_CLICK_AIR) {
+		if(perms && 
+		   event.getMaterial() == Material.TNT &&
+		   passedNameCheck(event) &&
+		   event.getAction() == Action.LEFT_CLICK_AIR) {
 			entity = world.spawn(handLocation, TNTPrimed.class);
 			((TNTPrimed) entity).setFuseTicks(ImpactTNT.fuseTicks);
 			
@@ -76,31 +79,17 @@ public class ImpactTNTPlayerListener implements Listener {
 			}
 		}		
 	}
-
-/* not needed at the moment
-	@EventHandler
-	public void onPlayerCommandPreprocess (PlayerCommandPreprocessEvent event) {
-
-		if (event.getMessage().equalsIgnoreCase("/grenade"))
-			throwGrenade(event.getPlayer());
-		return;
-	}
-
-	public static void throwGrenade(Player player) {
-		World world = player.getWorld();
-		double speedFactor = 1.5;
-		Location handLocation = player.getLocation();
-		handLocation.setY(handLocation.getY() + 1);
-
-		Vector direction = handLocation.getDirection();
-
-		Entity entity = null;
-		boolean perms = player.isOp() || player.hasPermission("grenade.throw");
-		if(perms){
-			entity = world.spawn(handLocation, TNTPrimed.class);
-			entity.setVelocity(direction.multiply(speedFactor));
+	
+	// Small method to test whether we need named TNT ("ImpactTNT") and whether the TNT is then named correctly
+	private boolean passedNameCheck(PlayerInteractEvent event) {
+		if (ImpactTNT.reqNamedTNT) {
+			if (event.getItem().getItemMeta().hasDisplayName()) {
+				return event.getItem().getItemMeta().getDisplayName().equalsIgnoreCase("ImpactTNT");
+			} else {
+				return false;
+			}
+		} else {
+			return true;
 		}
 	}
-*/
-	
 }

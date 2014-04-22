@@ -3,3 +3,4 @@ general:
   safetyradius: 10
   fuseticks: 100
   explosionradius: 5
+  reqnamedtnt: false
