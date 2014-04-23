@@ -75,7 +75,11 @@ public class ImpactTNTPlayerListener implements Listener {
 			// Throw the TNT, using the speedFactor as a modifier
 			entity.setVelocity(direction.multiply(speedFactor));
 			if (player.getGameMode() != GameMode.CREATIVE){
-				player.getInventory().removeItem(new ItemStack(Material.TNT , 1 ));
+				ItemStack is = player.getItemInHand();
+				if (is.getAmount() > 1)
+					is.setAmount(is.getAmount() - 1);
+				else
+					player.setItemInHand(null);
 			}
 		}		
 	}
