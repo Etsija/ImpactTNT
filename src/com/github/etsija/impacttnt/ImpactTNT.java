@@ -22,7 +22,7 @@ public class ImpactTNT extends JavaPlugin {
 	public static ImpactTNT impactTNT;
 	Logger _log = Logger.getLogger("Minecraft");
 	private PluginManager pm;
-	private final ImpactTNTPlayerListener playerListener = new ImpactTNTPlayerListener();
+	private final ImpactTNTEvents tntEvents = new ImpactTNTEvents();
 	
 	public static boolean expOnImpact;		// Does the TNT explode when hitting something other than air?
 	public static int     fuseTicks;		// How many ticks until it explodes anyway
@@ -33,7 +33,7 @@ public class ImpactTNT extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		pm = this.getServer().getPluginManager();
-		pm.registerEvents(playerListener, this);
+		pm.registerEvents(tntEvents, this);
 		processConfigFile();
 		_log.info("[ImpactTNT] enabled.");
 	}
