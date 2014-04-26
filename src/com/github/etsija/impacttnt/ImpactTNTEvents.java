@@ -36,43 +36,16 @@ public class ImpactTNTEvents implements Listener {
 		handLocation.setY(handLocation.getY() + 1);
 		// Safety radius squared (less complicated to calculate when srqt() left out)
 		final double squaredSafetyDistance = ImpactTNT.safetyRadius * ImpactTNT.safetyRadius;
-		
 		Vector direction = handLocation.getDirection();
-		Entity entity = null;
 		
 		boolean perms = player.isOp() || player.hasPermission("impacttnt.throw");
 		if(perms && 
 		   event.getMaterial() == Material.TNT &&
 		   passedNameCheckForPlayer(event) &&
 		   event.getAction() == Action.LEFT_CLICK_AIR) {
-			entity = world.spawn(handLocation, TNTPrimed.class);
-			((TNTPrimed) entity).setFuseTicks(ImpactTNT.fuseTicks);
 			
-			// If TNT configured to detonate on impact
-			if (ImpactTNT.expOnImpact) {
-				CommonEntity<Entity> tntEntity = CommonEntity.get(entity);
-				// This is a controller from Bergerkiller's awesome BKCommonLib
-				tntEntity.setController(new EntityController<CommonEntity<TNTPrimed>>() {
-					public void onTick() {
-						super.onTick();
-						// (Squared) distance of the thrown TNT from the thrower
-						double squaredDistance = handLocation.distanceSquared(entity.getLocation());
-						// This is the explosion logic: TNT explodes
-						// 1. If its movement is impaired (ie. it hits a wall or something)
-						// 2. If it's not moving anymore
-						// 3. If it gets to the ground (1. and 2. do not seem to detect coming back to the ground)
-						if (entity.isMovementImpaired() || !entity.isMoving() || entity.isOnGround()) {
-							if (squaredDistance > squaredSafetyDistance) {
-								entity.getEntity().setFuseTicks(0);
-								return;
-							} else {
-								//player.sendMessage(ChatColor.GREEN + "ImpactTNT: safety fuse applied, immediate detonation cancelled");
-								return;
-							}
-						}
-					}
-				});
-			}
+			// Create the TNT entity and set up an entity controller for it
+			Entity entity = createTNT(world, handLocation, squaredSafetyDistance);
 			
 			// Throw the TNT, using the speedFactor as a modifier
 			entity.setVelocity(direction.multiply(speedFactor));
@@ -93,7 +66,6 @@ public class ImpactTNTEvents implements Listener {
 		org.bukkit.block.Dispenser   d2 = (org.bukkit.block.Dispenser)    event.getBlock().getState();
 		BlockFace face = d.getFacing();
 		ItemStack i = event.getItem();
-		Entity entity = null;
 		final World world = event.getBlock().getWorld();
 		double speedFactor = 1.5;
 		final Location dispLocation = event.getBlock().getRelative(face).getLocation();
@@ -101,48 +73,56 @@ public class ImpactTNTEvents implements Listener {
 		// Safety radius squared (less complicated to calculate when srqt() left out)
 		final double squaredSafetyDistance = ImpactTNT.safetyRadius * ImpactTNT.safetyRadius;
 		
-		// The item to dispense is valid TNT
-		if ((i.getType() == Material.TNT) &&
-			 passedNameCheckForDispenser(event)) {
-			//_log.info("ImpactTNT is being shot");
+		// The item to dispense is valid TNT and the dispensers work as cannons
+		if (ImpactTNT.dispenserCannon &&
+			(i.getType() == Material.TNT) &&
+			passedNameCheckForDispenser(event)) {
 			event.setCancelled(true);
-			entity = world.spawn(dispLocation, TNTPrimed.class);
-			((TNTPrimed) entity).setFuseTicks(ImpactTNT.fuseTicks);
 			
-			// If TNT configured to detonate on impact
-			if (ImpactTNT.expOnImpact) {
-				CommonEntity<Entity> tntEntity = CommonEntity.get(entity);
-				// This is a controller from Bergerkiller's awesome BKCommonLib
-				tntEntity.setController(new EntityController<CommonEntity<TNTPrimed>>() {
-					public void onTick() {
-						super.onTick();
-						// (Squared) distance of the thrown TNT from the thrower
-						double squaredDistance = dispLocation.distanceSquared(entity.getLocation());
-						// This is the explosion logic: TNT explodes
-						// 1. If its movement is impaired (ie. it hits a wall or something)
-						// 2. If it's not moving anymore
-						// 3. If it gets to the ground (1. and 2. do not seem to detect coming back to the ground)
-						if (entity.isMovementImpaired() || !entity.isMoving() || entity.isOnGround()) {
-							if (squaredDistance > squaredSafetyDistance) {
-								entity.getEntity().setFuseTicks(0);
-								return;
-							} else {
-								//player.sendMessage(ChatColor.GREEN + "ImpactTNT: safety fuse applied, immediate detonation cancelled");
-								return;
-							}
-						}
-					}
-				});
-			}
+			// Create the TNT entity and set up an entity controller for it
+			Entity entity = createTNT(world, dispLocation, squaredSafetyDistance);
+			
 			// Shoot the TNT from the dispenser, using the speedFactor as a modifier
-			//Vector direction = dispLocation.getDirection();
 			Vector v = new Vector (entity.getLocation().getX() - event.getBlock().getLocation().getX(), 
 								   entity.getLocation().getY() - event.getBlock().getLocation().getY(), 
 								   entity.getLocation().getZ() - event.getBlock().getLocation().getZ());
-			//_log.info("Velocity vector: " + v);
-			entity.setVelocity(v.multiply(speedFactor));
+			
+			entity.setVelocity(v.normalize().multiply(speedFactor));
 			d2.getInventory().removeItem(i);
 		}
+	}
+	
+	// Create the ImpactTNT and set an entity controller to control it
+	private Entity createTNT(final World world, final Location loc, final double sqSafetyDist) {
+		Entity entity = world.spawn(loc, TNTPrimed.class);
+		((TNTPrimed) entity).setFuseTicks(ImpactTNT.fuseTicks);
+		
+		// If TNT configured to detonate on impact
+		if (ImpactTNT.expOnImpact) {
+			CommonEntity<Entity> tntEntity = CommonEntity.get(entity);
+			// This is a controller from Bergerkiller's awesome BKCommonLib
+			tntEntity.setController(new EntityController<CommonEntity<TNTPrimed>>() {
+				public void onTick() {
+					super.onTick();
+					// (Squared) distance of the thrown TNT from the thrower
+					double squaredDistance = loc.distanceSquared(entity.getLocation());
+					// This is the explosion logic: TNT explodes
+					// 1. If its movement is impaired (ie. it hits a wall or something)
+					// 2. If it's not moving anymore
+					// 3. If it gets to the ground (1. and 2. do not seem to detect coming back to the ground)
+					if (entity.isMovementImpaired() || !entity.isMoving() || entity.isOnGround()) {
+						if (squaredDistance > sqSafetyDist) {
+							entity.getEntity().setFuseTicks(0);
+							return;
+						} else {
+							//player.sendMessage(ChatColor.GREEN + "ImpactTNT: safety fuse applied, immediate detonation cancelled");
+							return;
+						}
+					}
+				}
+			});
+		}
+		return entity;
 	}
 	
 	// Small method to test whether we need named TNT ("ImpactTNT") and whether the TNT is then named correctly

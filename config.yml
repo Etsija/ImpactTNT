@@ -4,3 +4,4 @@ general:
   fuseticks: 100
   explosionradius: 5
   reqnamedtnt: false
+  dispensercannon: true

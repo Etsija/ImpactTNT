@@ -29,6 +29,7 @@ public class ImpactTNT extends JavaPlugin {
 	public static int     expRadius;		// Explosion radius
 	public static int     safetyRadius;		// It won't explode until when it has reached this distance from the player who threw it
 	public static boolean reqNamedTNT;		// Does the plugin require special TNT renamed as "ImpactTNT" to work?
+	public static boolean dispenserCannon;	// Do the dispensers work as cannons, shooting out ImpactTNT?
 	
 	@Override
 	public void onEnable() {
@@ -56,6 +57,7 @@ public class ImpactTNT extends JavaPlugin {
 		defParams.put("general.explosionradius", 5);
 		defParams.put("general.safetyradius", 10);
 		defParams.put("general.reqnamedtnt", false);
+		defParams.put("general.dispensercannon", true);
 		
 		// If config does not include a default parameter, add it
 		for (final Entry<String, Object> e : defParams.entrySet())
@@ -66,11 +68,12 @@ public class ImpactTNT extends JavaPlugin {
 		this.saveConfig();
 		
 		// Read plugin config parameters from config.yml
-		expOnImpact = getConfig().getBoolean("general.explodeonimpact");
-		fuseTicks = getConfig().getInt("general.fuseticks");
-		expRadius = getConfig().getInt("general.explosionradius");
-		safetyRadius = getConfig().getInt("general.safetyradius");
-		reqNamedTNT = getConfig().getBoolean("general.reqnamedtnt");
+		expOnImpact     = getConfig().getBoolean("general.explodeonimpact");
+		fuseTicks       = getConfig().getInt("general.fuseticks");
+		expRadius       = getConfig().getInt("general.explosionradius");
+		safetyRadius    = getConfig().getInt("general.safetyradius");
+		reqNamedTNT     = getConfig().getBoolean("general.reqnamedtnt");
+		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
 	}		
 
 	// Plugin commands
