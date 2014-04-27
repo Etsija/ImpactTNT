@@ -1,5 +1,12 @@
 package com.github.etsija.impacttnt;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,8 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -39,12 +49,13 @@ public class ImpactTNT extends JavaPlugin {
 		pm = this.getServer().getPluginManager();
 		pm.registerEvents(tntEvents, this);
 		processConfigFile();
-		//processCannonFile();
+		loadCannons();
 		_log.info("[ImpactTNT] enabled.");
 	}
 
 	@Override
 	public void onDisable() {
+		saveCannons();
 		_log.info("[ImpactTNT] disabled.");
 	}
 
@@ -80,37 +91,83 @@ public class ImpactTNT extends JavaPlugin {
 		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
 	}		
 
-	// Handle reading & updating the cannons.yml
-	public void processCannonFile() {
-
-		final Map<String, Object> defParams = new HashMap<String, Object>();
-		FileConfiguration config = this.getConfig();
-		config.options().copyDefaults(true);
+	// Save the list of dispenser cannons into a datafile for persistence
+	public void saveCannons() {
+		File saveFile = new File(this.getDataFolder(), "cannons.dat");
 		
-		// This is the default configuration
-		defParams.put("general.explodeonimpact", true);
-		defParams.put("general.fuseticks", 200);
-		defParams.put("general.explosionradius", 5);
-		defParams.put("general.safetyradius", 10);
-		defParams.put("general.reqnamedtnt", false);
-		defParams.put("general.dispensercannon", true);
+		// In case the savefile doesn't exist, create it
+		if (!saveFile.exists()) {
+			try {
+				saveFile.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		
-		// If config does not include a default parameter, add it
-		for (final Entry<String, Object> e : defParams.entrySet())
-			if (!config.contains(e.getKey()))
-				config.set(e.getKey(), e.getValue());
-		
-		// Save default values to config.yml in datadirectory
-		this.saveConfig();
-		
-		// Read plugin config parameters from config.yml
-		expOnImpact     = getConfig().getBoolean("general.explodeonimpact");
-		fuseTicks       = getConfig().getInt("general.fuseticks");
-		expRadius       = getConfig().getInt("general.explosionradius");
-		safetyRadius    = getConfig().getInt("general.safetyradius");
-		reqNamedTNT     = getConfig().getBoolean("general.reqnamedtnt");
-		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
-	}	
+		// Save the data
+		try {
+			FileOutputStream   fStream = new FileOutputStream(saveFile);
+			ObjectOutputStream oStream = new ObjectOutputStream(fStream);
+			
+			oStream.writeInt(cannons.size());
+			for (CannonDispenser c : cannons) {
+				//oStream.writeObject(c.getLocation());
+				oStream.writeObject(c.getLocation().getWorld().getName());
+				oStream.writeDouble(c.getLocation().getX());
+				oStream.writeDouble(c.getLocation().getY());
+				oStream.writeDouble(c.getLocation().getZ());
+				oStream.writeInt(c.getDirection());
+				oStream.writeInt(c.getAngle());
+			}
+			oStream.close();	
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+	}
+	
+	// Load the dispenser cannons from a datafile
+	public void loadCannons() {
+		File saveFile = new File(this.getDataFolder(), "cannons.dat");
+		if (saveFile.exists()) {
+			FileInputStream   fStream = null;
+			ObjectInputStream oStream = null;
+			
+			// Read the data in
+			try {
+				fStream = new FileInputStream(saveFile);
+				oStream = new ObjectInputStream(fStream);
+				int count = oStream.readInt();
+				for (int i = 0; i < count; i++) {
+					World w = Bukkit.getServer().getWorld(oStream.readObject().toString());
+					Double x = oStream.readDouble();
+					Double y = oStream.readDouble();
+					Double z = oStream.readDouble();
+					int direction = oStream.readInt();
+					int angle     = oStream.readInt();
+					Location loc = new Location(w, x, y, z);
+					CannonDispenser cannon = new CannonDispenser(loc, direction, angle);
+					cannons.add(cannon);
+				}
+				_log.info("[ImpactTNT] Read in successfully " + count + " dispenser cannons.");
+			} catch (FileNotFoundException e) {
+				_log.info("Could not locate cannons.dat");
+				e.printStackTrace();
+			} catch (IOException e) {
+				_log.info("IO error when trying to read cannons.dat");
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				_log.info("Could not read cannons.dat, class not found");
+				e.printStackTrace();
+			} finally {
+				try {
+					fStream.close();
+				} catch (IOException e) {
+					_log.info("Error reading cannons.dat, could not close the stream");
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 	
 	// Plugin commands
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {

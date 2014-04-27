@@ -84,7 +84,7 @@ public class ImpactTNTEvents implements Listener {
 			im.setDisplayName("ImpactTNT");
 			i.setItemMeta(im);
 			if (inv.containsAtLeast(i, 1)) {
-				CannonDispenser c = new CannonDispenser(dispenser, 0, 45);
+				CannonDispenser c = new CannonDispenser(dispenser.getLocation(), 0, 45);
 				if (findCannonFromList(ImpactTNT.cannons, c.getLocation()) == null) {
 					ImpactTNT.cannons.add(c);
 				}
@@ -111,7 +111,7 @@ public class ImpactTNTEvents implements Listener {
 				}
 				p.sendMessage(ChatColor.GREEN + "Direction: " 
 							+ ChatColor.RED + c.getDirection() + ChatColor.GREEN + " degrees, Angle: "
-							+ ChatColor.RED + c.getAngle()     + ChatColor.RED   + " degrees");
+							+ ChatColor.RED + c.getAngle()     + ChatColor.GREEN + " degrees");
 			}
 		}
 	}
@@ -152,7 +152,7 @@ public class ImpactTNTEvents implements Listener {
 			// Find the CannonDispenser entry from the list of cannons.  If this dispenser is not yet on the list, add it
 			c = findCannonFromList(ImpactTNT.cannons, event.getBlock().getLocation());
 			if (c == null) {
-				c = new CannonDispenser(d2, 0, 45);
+				c = new CannonDispenser(d2.getLocation(), 0, 45);
 				ImpactTNT.cannons.add(c);
 			}
 			

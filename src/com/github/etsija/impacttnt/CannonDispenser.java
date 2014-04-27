@@ -4,24 +4,27 @@ import org.bukkit.Location;
 import org.bukkit.material.Dispenser;
 
 public class CannonDispenser extends Dispenser {
-	org.bukkit.block.Dispenser dispenser;
+	//org.bukkit.block.Dispenser dispenser;
 	Location location;
 	int direction;
 	int angle;
 	
-	public CannonDispenser(org.bukkit.block.Dispenser disp, int dir, int angle) {
-		this.dispenser = disp;
+	//public CannonDispenser(org.bukkit.block.Dispenser disp, int dir, int angle) {
+	public CannonDispenser(Location loc, int dir, int angle) {
+		//this.dispenser = disp;
+		this.location = loc;
 		this.direction = dir;
 		this.angle = angle;
-		this.setLocation();
+		//this.setLocation();
 	}
 	
 	public Location getLocation() {
 		return this.location;
 	}
 	
-	public void setLocation() {
-		this.location = this.dispenser.getLocation();
+	public void setLocation(Location location) {
+		//this.location = this.dispenser.getLocation();
+		this.location = location;
 	}
 	
 	public int getDirection() {
