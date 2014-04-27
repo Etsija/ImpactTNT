@@ -1,12 +1,16 @@
 package com.github.etsija.impacttnt;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Logger;
 
 //import org.bukkit.ChatColor;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -14,9 +18,12 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 import com.bergerkiller.bukkit.common.controller.EntityController;		// BKCommonLib is needed for this plugin to work!
 
@@ -25,6 +32,10 @@ import com.bergerkiller.bukkit.common.entity.CommonEntity;
 public class ImpactTNTEvents implements Listener {
 	
 	Logger _log = Logger.getLogger("Minecraft"); // Write debug info to console
+	
+	private enum Side {
+		LEFT, RIGHT
+	}
 	
 	// Handles throwing of the TNTs
 	@EventHandler
@@ -59,9 +70,68 @@ public class ImpactTNTEvents implements Listener {
 		}		
 	}
 	
+	@EventHandler
+	public void onDispenserInteract(final PlayerInteractEvent event) {
+		Block      b = event.getClickedBlock();
+		Player     p = event.getPlayer();
+		BlockFace bf = event.getBlockFace();
+		
+		if (b != null && b.getType() == Material.DISPENSER) {
+			org.bukkit.block.Dispenser dispenser = (org.bukkit.block.Dispenser) b.getState();
+			Inventory inv = dispenser.getInventory();
+			ItemStack i = new ItemStack(Material.TNT, 1);
+			ItemMeta im = i.getItemMeta();
+			im.setDisplayName("ImpactTNT");
+			i.setItemMeta(im);
+			if (inv.containsAtLeast(i, 1)) {
+				CannonDispenser c = new CannonDispenser(dispenser, 0, 45);
+				if (findCannonFromList(ImpactTNT.cannons, c.getLocation()) == null) {
+					ImpactTNT.cannons.add(c);
+				}
+			}
+			
+			// Detect when player clicks the dispenser with a wooden stick, to change the direction/angle
+			if ((event.getAction() == Action.LEFT_CLICK_BLOCK) &&
+				(p.getItemInHand().getType() == Material.STICK)) {
+				org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) b.getState().getData();
+				BlockFace face = d.getFacing();
+				CannonDispenser c = findCannonFromList(ImpactTNT.cannons, dispenser.getLocation());
+				if (bf == BlockFace.UP) {
+					boolean sneaking = p.isSneaking();
+					if (sneaking) {
+						c.setAngle(c.getAngle() - 1);
+					} else {
+						c.setAngle(c.getAngle() + 1);
+					}
+				}
+				if (calcSide(face, bf) == Side.LEFT) {
+					c.setDirection(c.getDirection() - 1);
+				} else if (calcSide(face, bf) == Side.RIGHT) {
+					c.setDirection(c.getDirection() + 1);
+				}
+				p.sendMessage(ChatColor.GREEN + "Direction: " 
+							+ ChatColor.RED + c.getDirection() + ChatColor.GREEN + " degrees, Angle: "
+							+ ChatColor.RED + c.getAngle()     + ChatColor.RED   + " degrees");
+			}
+		}
+	}
+	
+	// Remove this dispenser from the cannon list on block break
+	@EventHandler
+	public void onDispenserBreak(final BlockBreakEvent event) {
+		Block b = event.getBlock();
+		
+		if (b.getType() == Material.DISPENSER) {
+			if (findCannonFromList(ImpactTNT.cannons, b.getLocation()) != null) {
+				removeFromCannons(ImpactTNT.cannons, event.getBlock().getLocation());
+			}
+		}
+	}
+	
 	// Handles the dispenser dispense event, when it has TNT to dispense
 	@EventHandler
 	public void onDispense(final BlockDispenseEvent event) {
+		CannonDispenser c = null;
 		org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) event.getBlock().getState().getData();
 		org.bukkit.block.Dispenser   d2 = (org.bukkit.block.Dispenser)    event.getBlock().getState();
 		BlockFace face = d.getFacing();
@@ -79,16 +149,92 @@ public class ImpactTNTEvents implements Listener {
 			passedNameCheckForDispenser(event)) {
 			event.setCancelled(true);
 			
+			// Find the CannonDispenser entry from the list of cannons.  If this dispenser is not yet on the list, add it
+			c = findCannonFromList(ImpactTNT.cannons, event.getBlock().getLocation());
+			if (c == null) {
+				c = new CannonDispenser(d2, 0, 45);
+				ImpactTNT.cannons.add(c);
+			}
+			
 			// Create the TNT entity and set up an entity controller for it
 			Entity entity = createTNT(world, dispLocation, squaredSafetyDistance);
 			
 			// Shoot the TNT from the dispenser, using the speedFactor as a modifier
-			Vector v = new Vector (entity.getLocation().getX() - event.getBlock().getLocation().getX(), 
-								   entity.getLocation().getY() - event.getBlock().getLocation().getY(), 
-								   entity.getLocation().getZ() - event.getBlock().getLocation().getZ());
-			
-			entity.setVelocity(v.normalize().multiply(speedFactor));
+			// Also use this dispenser cannon's direction settings!
+			Vector v = calcVelocityVector(face, c.getDirection(), c.getAngle());
+			entity.setVelocity(v.multiply(speedFactor));
 			d2.getInventory().removeItem(i);
+		}
+	}
+	
+	// Calculate the velocity vector for the projectile
+	private Vector calcVelocityVector(BlockFace f, int dir, int angle) {
+		double pitch = angle * Math.PI / 180;
+		double yaw   = dir   * Math.PI / 180;
+		double x = Math.sin(yaw) * Math.cos(pitch);
+		double y = Math.cos(yaw) * Math.cos(pitch); 
+		double z = Math.sin(pitch);
+		
+		if (f == BlockFace.NORTH) {
+			Vector v = new Vector(x, z, -y);
+			return v;
+		} else if (f == BlockFace.EAST) {
+			Vector v = new Vector(y, z, x);
+			return v;
+		} else if (f == BlockFace.SOUTH) {
+			Vector v = new Vector(-x, z, y);
+			return v;
+		} else if (f == BlockFace.WEST) {
+			Vector v = new Vector(-y, z, -x);
+			return v;
+		}
+		return null;
+	}
+	
+	// On which side the player clicks the dispenser, left or right?
+	private Side calcSide(BlockFace facing, BlockFace bf) {
+		Side side = null;
+		if (facing == BlockFace.NORTH) {
+			if (bf == BlockFace.WEST)
+				side = Side.LEFT;
+			else if (bf == BlockFace.EAST)
+				side = Side.RIGHT;
+		} else if (facing == BlockFace.EAST) {
+			if (bf == BlockFace.NORTH)
+				side = Side.LEFT;
+			else if (bf == BlockFace.SOUTH)
+				side = Side.RIGHT;			
+		} else if (facing == BlockFace.SOUTH) {
+			if (bf == BlockFace.EAST)
+				side = Side.LEFT;
+			else if (bf == BlockFace.WEST)
+				side = Side.RIGHT;
+		} else if (facing == BlockFace.WEST) {
+			if (bf == BlockFace.SOUTH)
+				side = Side.LEFT;
+			else if (bf == BlockFace.NORTH)
+				side = Side.RIGHT;
+		}
+		return side;
+	}
+	
+	
+	// Find a cannon from the list of cannons, based on location
+	private CannonDispenser findCannonFromList(List<CannonDispenser> cannons, Location loc) {
+		for (CannonDispenser c : cannons) {
+			if (c.getLocation().equals(loc))
+				return c;
+		}
+		return null;
+	}
+	
+	// Remove this dispenser from the cannon list
+	private void removeFromCannons(List<CannonDispenser> cannons, Location loc) {
+		for (Iterator<CannonDispenser> it = cannons.iterator(); it.hasNext(); ) {
+			CannonDispenser c = it.next();
+			if (c.getLocation().equals(loc)) {
+				it.remove();
+			}
 		}
 	}
 	

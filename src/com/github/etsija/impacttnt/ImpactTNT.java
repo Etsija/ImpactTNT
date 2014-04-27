@@ -1,7 +1,9 @@
 package com.github.etsija.impacttnt;
 
 import java.util.logging.Logger;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -23,6 +25,7 @@ public class ImpactTNT extends JavaPlugin {
 	Logger _log = Logger.getLogger("Minecraft");
 	private PluginManager pm;
 	private final ImpactTNTEvents tntEvents = new ImpactTNTEvents();
+	public static List<CannonDispenser> cannons = new ArrayList<CannonDispenser>();
 	
 	public static boolean expOnImpact;		// Does the TNT explode when hitting something other than air?
 	public static int     fuseTicks;		// How many ticks until it explodes anyway
@@ -36,6 +39,7 @@ public class ImpactTNT extends JavaPlugin {
 		pm = this.getServer().getPluginManager();
 		pm.registerEvents(tntEvents, this);
 		processConfigFile();
+		//processCannonFile();
 		_log.info("[ImpactTNT] enabled.");
 	}
 
@@ -76,6 +80,38 @@ public class ImpactTNT extends JavaPlugin {
 		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
 	}		
 
+	// Handle reading & updating the cannons.yml
+	public void processCannonFile() {
+
+		final Map<String, Object> defParams = new HashMap<String, Object>();
+		FileConfiguration config = this.getConfig();
+		config.options().copyDefaults(true);
+		
+		// This is the default configuration
+		defParams.put("general.explodeonimpact", true);
+		defParams.put("general.fuseticks", 200);
+		defParams.put("general.explosionradius", 5);
+		defParams.put("general.safetyradius", 10);
+		defParams.put("general.reqnamedtnt", false);
+		defParams.put("general.dispensercannon", true);
+		
+		// If config does not include a default parameter, add it
+		for (final Entry<String, Object> e : defParams.entrySet())
+			if (!config.contains(e.getKey()))
+				config.set(e.getKey(), e.getValue());
+		
+		// Save default values to config.yml in datadirectory
+		this.saveConfig();
+		
+		// Read plugin config parameters from config.yml
+		expOnImpact     = getConfig().getBoolean("general.explodeonimpact");
+		fuseTicks       = getConfig().getInt("general.fuseticks");
+		expRadius       = getConfig().getInt("general.explosionradius");
+		safetyRadius    = getConfig().getInt("general.safetyradius");
+		reqNamedTNT     = getConfig().getBoolean("general.reqnamedtnt");
+		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
+	}	
+	
 	// Plugin commands
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
 		Player player;
