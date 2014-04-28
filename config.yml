@@ -5,3 +5,5 @@ general:
   explosionradius: 5
   reqnamedtnt: false
   dispensercannon: true
+  maxsector: 45
+  maxangle: 60

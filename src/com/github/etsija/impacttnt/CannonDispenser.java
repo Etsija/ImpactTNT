@@ -27,7 +27,7 @@ public class CannonDispenser extends Dispenser {
 	}
 	
 	public void setDirection(int direction) {
-		if ((direction >= -45) && (direction <= 45))
+		if ((direction >= -ImpactTNT.maxSector) && (direction <= ImpactTNT.maxSector))
 			this.direction = direction;
 	}
 	
@@ -36,7 +36,7 @@ public class CannonDispenser extends Dispenser {
 	}
 	
 	public void setAngle(int angle) {
-		if ((angle >= 0) && (angle <= 60))
+		if ((angle >= 0) && (angle <= ImpactTNT.maxAngle))
 			this.angle = angle;
 	}
 	

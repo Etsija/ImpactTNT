@@ -43,6 +43,8 @@ public class ImpactTNT extends JavaPlugin {
 	public static int     safetyRadius;		// It won't explode until when it has reached this distance from the player who threw it
 	public static boolean reqNamedTNT;		// Does the plugin require special TNT renamed as "ImpactTNT" to work?
 	public static boolean dispenserCannon;	// Do the dispensers work as cannons, shooting out ImpactTNT?
+	public static int     maxSector;		// Maximum sector for the dispenser cannons
+	public static int     maxAngle;			// Maximum angle for the dispenser cannons
 	
 	@Override
 	public void onEnable() {
@@ -73,6 +75,8 @@ public class ImpactTNT extends JavaPlugin {
 		defParams.put("general.safetyradius", 10);
 		defParams.put("general.reqnamedtnt", false);
 		defParams.put("general.dispensercannon", true);
+		defParams.put("general.maxsector", 45);
+		defParams.put("general.maxangle", 60);
 		
 		// If config does not include a default parameter, add it
 		for (final Entry<String, Object> e : defParams.entrySet())
@@ -89,6 +93,8 @@ public class ImpactTNT extends JavaPlugin {
 		safetyRadius    = getConfig().getInt("general.safetyradius");
 		reqNamedTNT     = getConfig().getBoolean("general.reqnamedtnt");
 		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
+		maxSector       = getConfig().getInt("general.maxsector");
+		maxAngle        = getConfig().getInt("general.maxangle");
 	}		
 
 	// Save the list of dispenser cannons into a datafile for persistence
@@ -171,6 +177,20 @@ public class ImpactTNT extends JavaPlugin {
 		}
 	}
 	
+	// Check that all dispenser cannon params are within the new limits
+	public void checkLimits() {
+		for (CannonDispenser c : cannons) {
+			if (c.getDirection() < -maxSector) {
+				c.setDirection(-maxSector);
+			} else if (c.getDirection() > maxSector) {
+				c.setDirection(maxSector);
+			}
+			if (c.getAngle() > maxAngle) {
+				c.setAngle(maxAngle);
+			}
+		}
+	}
+	
 	// Plugin commands
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
 		Player player;
@@ -192,6 +212,8 @@ public class ImpactTNT extends JavaPlugin {
 					}
 					player.sendMessage(ChatColor.GREEN + "One stack of TNT renamed");
 					return true;
+				
+				// Switch all TNT in your inventory between TNT<->ImpactTNT
 				} else if (args[0].equalsIgnoreCase("all")) {
 					PlayerInventory pi = player.getInventory();
 					for (ItemStack i : pi) {
@@ -201,9 +223,38 @@ public class ImpactTNT extends JavaPlugin {
 					}
 					player.sendMessage(ChatColor.GREEN + "All TNT in your inventory renamed");
 					return true;
+				
+				// Save the cannon data
 				} else if (args[0].equalsIgnoreCase("save")) {
 					saveCannons();
 					player.sendMessage(ChatColor.GREEN + "" + cannons.size() + " dispenser cannons saved to cannons.dat");
+					return true;
+				
+				// Change the maximum sector into (-maxSector...maxSector)
+				} else if (args[0].equalsIgnoreCase("maxsector")) {
+					int i = Integer.parseInt(args[1]);
+					if ((i > 0) && (i <= 90)) {
+						maxSector = i;
+					}
+					this.getConfig().set("general.maxsector", maxSector);
+					this.saveConfig();
+					checkLimits();
+					player.sendMessage(ChatColor.GREEN + "Cannon sector is now ("
+									 + String.format("%+03d", -maxSector) + ","
+									 + String.format("%+03d",  maxSector) + ")");
+					return true;
+				
+				// Change the maximum angle to (0...maxAngle)
+				} else if (args[0].equalsIgnoreCase("maxangle")) {
+					int i = Integer.parseInt(args[1]);
+					if ((i > 0) && (i < 90)) {
+						maxAngle = i;
+					}
+					this.getConfig().set("general.maxangle", maxAngle);
+					this.saveConfig();
+					checkLimits();
+					player.sendMessage(ChatColor.GREEN + "Cannon angle is now (0,"
+									 + String.format("%+03d",  maxAngle) + ")");
 					return true;
 				}
 			} else {
