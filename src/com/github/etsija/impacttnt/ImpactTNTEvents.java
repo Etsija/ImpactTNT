@@ -34,7 +34,7 @@ public class ImpactTNTEvents implements Listener {
 	Logger _log = Logger.getLogger("Minecraft"); // Write debug info to console
 	
 	private enum Side {
-		LEFT, RIGHT
+		LEFT, RIGHT, FRONT, BACK
 	}
 	
 	// Handles throwing of the TNTs
@@ -96,8 +96,8 @@ public class ImpactTNTEvents implements Listener {
 				org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) b.getState().getData();
 				BlockFace face = d.getFacing();
 				CannonDispenser c = findCannonFromList(ImpactTNT.cannons, dispenser.getLocation());
+				boolean sneaking = p.isSneaking();
 				if (bf == BlockFace.UP) {
-					boolean sneaking = p.isSneaking();
 					if (sneaking) {
 						c.setAngle(c.getAngle() - 1);
 					} else {
@@ -105,13 +105,29 @@ public class ImpactTNTEvents implements Listener {
 					}
 				}
 				if (calcSide(face, bf) == Side.LEFT) {
-					c.setDirection(c.getDirection() - 1);
+					if (sneaking) {
+						c.setDirection(c.getDirection() - 5);
+					} else {
+						c.setDirection(c.getDirection() - 1);
+					}
 				} else if (calcSide(face, bf) == Side.RIGHT) {
-					c.setDirection(c.getDirection() + 1);
+					if (sneaking) {
+						c.setDirection(c.getDirection() + 5);
+					} else {
+						c.setDirection(c.getDirection() + 1);
+					}
+				} else if (calcSide(face, bf) == Side.BACK) {
+					if (sneaking) {
+						c.setDirection(0);
+						c.setAngle(45);
+					} 
 				}
+				// Print out the current parameters of this cannon
 				p.sendMessage(ChatColor.GREEN + "Direction: " 
-							+ ChatColor.RED + c.getDirection() + ChatColor.GREEN + " degrees, Angle: "
-							+ ChatColor.RED + c.getAngle()     + ChatColor.GREEN + " degrees");
+							+ ChatColor.RED + String.format("%+03d", c.getDirection()) + "" 
+							+ ChatColor.GREEN + " degrees, Angle: "
+							+ ChatColor.RED + String.format("%02d", c.getAngle())     
+							+ ChatColor.GREEN + " degrees");
 			}
 		}
 	}
@@ -199,21 +215,37 @@ public class ImpactTNTEvents implements Listener {
 				side = Side.LEFT;
 			else if (bf == BlockFace.EAST)
 				side = Side.RIGHT;
+			else if (bf == BlockFace.NORTH)
+				side = Side.FRONT;
+			else if (bf == BlockFace.SOUTH)
+				side = Side.BACK;
 		} else if (facing == BlockFace.EAST) {
 			if (bf == BlockFace.NORTH)
 				side = Side.LEFT;
 			else if (bf == BlockFace.SOUTH)
-				side = Side.RIGHT;			
+				side = Side.RIGHT;
+			else if (bf == BlockFace.EAST)
+				side = Side.FRONT;
+			else if (bf == BlockFace.WEST)
+				side = Side.BACK;
 		} else if (facing == BlockFace.SOUTH) {
 			if (bf == BlockFace.EAST)
 				side = Side.LEFT;
 			else if (bf == BlockFace.WEST)
 				side = Side.RIGHT;
+			else if (bf == BlockFace.SOUTH)
+				side = Side.FRONT;
+			else if (bf == BlockFace.NORTH)
+				side = Side.BACK;
 		} else if (facing == BlockFace.WEST) {
 			if (bf == BlockFace.SOUTH)
 				side = Side.LEFT;
 			else if (bf == BlockFace.NORTH)
 				side = Side.RIGHT;
+			else if (bf == BlockFace.WEST)
+				side = Side.FRONT;
+			else if (bf == BlockFace.EAST)
+				side = Side.BACK;
 		}
 		return side;
 	}

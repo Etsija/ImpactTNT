@@ -95,6 +95,8 @@ public class ImpactTNT extends JavaPlugin {
 	public void saveCannons() {
 		File saveFile = new File(this.getDataFolder(), "cannons.dat");
 		
+		if (cannons.size() == 0) return;
+		
 		// In case the savefile doesn't exist, create it
 		if (!saveFile.exists()) {
 			try {
@@ -198,6 +200,10 @@ public class ImpactTNT extends JavaPlugin {
 						}
 					}
 					player.sendMessage(ChatColor.GREEN + "All TNT in your inventory renamed");
+					return true;
+				} else if (args[0].equalsIgnoreCase("save")) {
+					saveCannons();
+					player.sendMessage(ChatColor.GREEN + "" + cannons.size() + " dispenser cannons saved to cannons.dat");
 					return true;
 				}
 			} else {

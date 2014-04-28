@@ -1,6 +1,6 @@
 name: ImpactTNT
 main: com.github.etsija.impacttnt.ImpactTNT
-version: 0.2
+version: 0.3
 depend: [BKCommonLib]
 commands:
     impact:
