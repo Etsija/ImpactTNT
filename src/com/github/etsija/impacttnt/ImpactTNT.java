@@ -232,28 +232,32 @@ public class ImpactTNT extends JavaPlugin {
 				
 				// Change the maximum sector into (-maxSector...maxSector)
 				} else if (args[0].equalsIgnoreCase("maxsector")) {
-					int i = Integer.parseInt(args[1]);
-					if ((i > 0) && (i <= 90)) {
-						maxSector = i;
+					if (args.length == 2) {
+						int i = Integer.parseInt(args[1]);
+						if ((i > 0) && (i <= 90)) {
+							maxSector = i;
+						}
+						this.getConfig().set("general.maxsector", maxSector);
+						this.saveConfig();
+						checkLimits();
 					}
-					this.getConfig().set("general.maxsector", maxSector);
-					this.saveConfig();
-					checkLimits();
-					player.sendMessage(ChatColor.GREEN + "Cannon sector is now ("
+					player.sendMessage(ChatColor.GREEN + "Valid cannon sector is now ("
 									 + String.format("%+03d", -maxSector) + ","
-									 + String.format("%+03d",  maxSector) + ")");
+								     + String.format("%+03d",  maxSector) + ")");
 					return true;
 				
 				// Change the maximum angle to (0...maxAngle)
 				} else if (args[0].equalsIgnoreCase("maxangle")) {
-					int i = Integer.parseInt(args[1]);
-					if ((i > 0) && (i < 90)) {
-						maxAngle = i;
+					if (args.length == 2) {
+						int i = Integer.parseInt(args[1]);
+						if ((i > 0) && (i < 90)) {
+							maxAngle = i;
+						}
+						this.getConfig().set("general.maxangle", maxAngle);
+						this.saveConfig();
+						checkLimits();
 					}
-					this.getConfig().set("general.maxangle", maxAngle);
-					this.saveConfig();
-					checkLimits();
-					player.sendMessage(ChatColor.GREEN + "Cannon angle is now (0,"
+					player.sendMessage(ChatColor.GREEN + "Valid cannon angle is now (0,"
 									 + String.format("%+03d",  maxAngle) + ")");
 					return true;
 				}
