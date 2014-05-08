@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.logging.Logger;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -35,7 +33,7 @@ public class ImpactTNT extends JavaPlugin {
 	Logger _log = Logger.getLogger("Minecraft");
 	private PluginManager pm;
 	private final ImpactTNTEvents tntEvents = new ImpactTNTEvents();
-	public static List<CannonDispenser> cannons = new ArrayList<CannonDispenser>();
+	public static HashMap<Location, CannonDispenser> cannons = new HashMap<Location, CannonDispenser>();	// Cannons Map; for persistence
 	
 	public static boolean expOnImpact;		// Does the TNT explode when hitting something other than air?
 	public static int     fuseTicks;		// How many ticks until it explodes anyway
@@ -118,12 +116,13 @@ public class ImpactTNT extends JavaPlugin {
 			ObjectOutputStream oStream = new ObjectOutputStream(fStream);
 			
 			oStream.writeInt(cannons.size());
-			for (CannonDispenser c : cannons) {
-				//oStream.writeObject(c.getLocation());
-				oStream.writeObject(c.getLocation().getWorld().getName());
-				oStream.writeDouble(c.getLocation().getX());
-				oStream.writeDouble(c.getLocation().getY());
-				oStream.writeDouble(c.getLocation().getZ());
+			for (Map.Entry<Location, CannonDispenser> entry : cannons.entrySet()) {
+				Location        loc = entry.getKey();
+				CannonDispenser   c = entry.getValue();
+				oStream.writeObject(loc.getWorld().getName());
+				oStream.writeDouble(loc.getX());
+				oStream.writeDouble(loc.getY());
+				oStream.writeDouble(loc.getZ());
 				oStream.writeInt(c.getDirection());
 				oStream.writeInt(c.getAngle());
 			}
@@ -153,10 +152,11 @@ public class ImpactTNT extends JavaPlugin {
 					int direction = oStream.readInt();
 					int angle     = oStream.readInt();
 					Location loc = new Location(w, x, y, z);
-					CannonDispenser cannon = new CannonDispenser(loc, direction, angle);
-					cannons.add(cannon);
+					CannonDispenser cannon = new CannonDispenser(direction, angle);
+					cannons.put(loc, cannon);
 				}
 				_log.info("[ImpactTNT] Read in successfully " + count + " dispenser cannons.");
+				_log.info("Cannons: " + cannons);
 			} catch (FileNotFoundException e) {
 				_log.info("Could not locate cannons.dat");
 				e.printStackTrace();
@@ -179,7 +179,7 @@ public class ImpactTNT extends JavaPlugin {
 	
 	// Check that all dispenser cannon params are within the new limits
 	public void checkLimits() {
-		for (CannonDispenser c : cannons) {
+		for (CannonDispenser c : cannons.values()) {
 			if (c.getDirection() < -maxSector) {
 				c.setDirection(-maxSector);
 			} else if (c.getDirection() > maxSector) {

@@ -84,9 +84,10 @@ public class ImpactTNTEvents implements Listener {
 			im.setDisplayName("ImpactTNT");
 			i.setItemMeta(im);
 			if (inv.containsAtLeast(i, 1)) {
-				CannonDispenser c = new CannonDispenser(dispenser.getLocation(), 0, 45);
-				if (findCannonFromList(ImpactTNT.cannons, c.getLocation()) == null) {
-					ImpactTNT.cannons.add(c);
+				Location loc = dispenser.getLocation();
+				CannonDispenser c = new CannonDispenser(0, 45);
+				if (!ImpactTNT.cannons.containsKey(loc)) {
+					ImpactTNT.cannons.put(loc, c);
 				}
 			}
 			
@@ -95,7 +96,7 @@ public class ImpactTNTEvents implements Listener {
 				(p.getItemInHand().getType() == Material.STICK)) {
 				org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) b.getState().getData();
 				BlockFace face = d.getFacing();
-				CannonDispenser c = findCannonFromList(ImpactTNT.cannons, dispenser.getLocation());
+				CannonDispenser c = ImpactTNT.cannons.get(dispenser.getLocation());
 				boolean sneaking = p.isSneaking();
 				if (bf == BlockFace.UP) {
 					if (sneaking) {
@@ -135,11 +136,12 @@ public class ImpactTNTEvents implements Listener {
 	// Remove this dispenser from the cannon list on block break
 	@EventHandler
 	public void onDispenserBreak(final BlockBreakEvent event) {
-		Block b = event.getBlock();
+		Block      b = event.getBlock();
+		Location loc = b.getLocation();
 		
 		if (b.getType() == Material.DISPENSER) {
-			if (findCannonFromList(ImpactTNT.cannons, b.getLocation()) != null) {
-				removeFromCannons(ImpactTNT.cannons, event.getBlock().getLocation());
+			if (ImpactTNT.cannons.containsKey(loc)) {
+				ImpactTNT.cannons.remove(loc);
 			}
 		}
 	}
@@ -152,6 +154,7 @@ public class ImpactTNTEvents implements Listener {
 		org.bukkit.block.Dispenser   d2 = (org.bukkit.block.Dispenser)    event.getBlock().getState();
 		BlockFace face = d.getFacing();
 		ItemStack i = event.getItem();
+		Location loc = event.getBlock().getLocation();
 		final World world = event.getBlock().getWorld();
 		double speedFactor = 1.5;
 		final Location dispLocation = event.getBlock().getRelative(face).getLocation();
@@ -166,10 +169,10 @@ public class ImpactTNTEvents implements Listener {
 			event.setCancelled(true);
 			
 			// Find the CannonDispenser entry from the list of cannons.  If this dispenser is not yet on the list, add it
-			c = findCannonFromList(ImpactTNT.cannons, event.getBlock().getLocation());
+			c = ImpactTNT.cannons.get(loc);
 			if (c == null) {
-				c = new CannonDispenser(d2.getLocation(), 0, 45);
-				ImpactTNT.cannons.add(c);
+				c = new CannonDispenser(0, 45);
+				ImpactTNT.cannons.put(loc, c);
 			}
 			
 			// Create the TNT entity and set up an entity controller for it
@@ -248,26 +251,6 @@ public class ImpactTNTEvents implements Listener {
 				side = Side.BACK;
 		}
 		return side;
-	}
-	
-	
-	// Find a cannon from the list of cannons, based on location
-	private CannonDispenser findCannonFromList(List<CannonDispenser> cannons, Location loc) {
-		for (CannonDispenser c : cannons) {
-			if (c.getLocation().equals(loc))
-				return c;
-		}
-		return null;
-	}
-	
-	// Remove this dispenser from the cannon list
-	private void removeFromCannons(List<CannonDispenser> cannons, Location loc) {
-		for (Iterator<CannonDispenser> it = cannons.iterator(); it.hasNext(); ) {
-			CannonDispenser c = it.next();
-			if (c.getLocation().equals(loc)) {
-				it.remove();
-			}
-		}
 	}
 	
 	// Create the ImpactTNT and set an entity controller to control it

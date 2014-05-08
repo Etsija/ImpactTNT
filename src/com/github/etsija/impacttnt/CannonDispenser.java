@@ -1,27 +1,16 @@
 package com.github.etsija.impacttnt;
 
-import org.bukkit.Location;
 import org.bukkit.material.Dispenser;
 
 public class CannonDispenser extends Dispenser {
-	Location location;
 	int direction;
 	int angle;
 	
-	public CannonDispenser(Location loc, int dir, int angle) {
-		this.location = loc;
+	public CannonDispenser(int dir, int angle) {
 		this.direction = dir;
 		this.angle = angle;
 	}
-	
-	public Location getLocation() {
-		return this.location;
-	}
-	
-	public void setLocation(Location location) {
-		this.location = location;
-	}
-	
+		
 	public int getDirection() {
 		return this.direction;
 	}
