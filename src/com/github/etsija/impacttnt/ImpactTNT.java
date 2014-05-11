@@ -156,7 +156,6 @@ public class ImpactTNT extends JavaPlugin {
 					cannons.put(loc, cannon);
 				}
 				_log.info("[ImpactTNT] Read in successfully " + count + " dispenser cannons.");
-				_log.info("Cannons: " + cannons);
 			} catch (FileNotFoundException e) {
 				_log.info("Could not locate cannons.dat");
 				e.printStackTrace();
