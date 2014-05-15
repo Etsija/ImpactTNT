@@ -63,6 +63,10 @@ public class ImpactTNT extends JavaPlugin {
 			saveCannonsYML();
 		}
 		loadCannonsYML();
+		
+		// Check that the existing cannon dispensers obey the config limits for angle, sector, power
+		checkLimits();
+		
 		_log.info("[ImpactTNT] enabled.");
 	}
 
@@ -108,7 +112,7 @@ public class ImpactTNT extends JavaPlugin {
 		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
 		maxSector       = getConfig().getInt("general.maxsector");
 		maxAngle        = getConfig().getInt("general.maxangle");
-		minPower        = (float) getConfig().getDouble("general.minPower");
+		minPower        = (float) getConfig().getDouble("general.minpower");
 		maxPower        = (float) getConfig().getDouble("general.maxpower");
 	}		
 
@@ -146,7 +150,7 @@ public class ImpactTNT extends JavaPlugin {
         } catch (Exception e) {
             e.printStackTrace();
         }
-		_log.info("[ImpactTNT] Saved successfully " + i + " dispenser cannons.");
+		_log.info("[ImpactTNT] Saved successfully " + (i-1) + " dispenser cannons.");
 	}
 	
 	// Save the list of dispenser cannons into a datafile for persistence
@@ -270,6 +274,11 @@ public class ImpactTNT extends JavaPlugin {
 			}
 			if (c.getAngle() > maxAngle) {
 				c.setAngle(maxAngle);
+			}
+			if (c.getPower() < minPower) {
+				c.setPower(minPower);
+			} else if (c.getPower() > maxPower) {
+				c.setPower(maxPower);
 			}
 		}
 	}

@@ -73,7 +73,10 @@ public class ImpactTNTEvents implements Listener {
 		Player     p = event.getPlayer();
 		BlockFace bf = event.getBlockFace();
 		
-		if (b != null && b.getType() == Material.DISPENSER) {
+		if (b != null && 
+			b.getType() == Material.DISPENSER &&
+			event.getAction() == Action.LEFT_CLICK_BLOCK) {
+			
 			org.bukkit.block.Dispenser dispenser = (org.bukkit.block.Dispenser) b.getState();
 			Inventory inv = dispenser.getInventory();
 			ItemStack i = new ItemStack(Material.TNT, 1);
@@ -89,8 +92,7 @@ public class ImpactTNTEvents implements Listener {
 			}
 			
 			// Detect when player clicks the dispenser with a wooden stick, to change the direction/angle
-			if ((event.getAction() == Action.LEFT_CLICK_BLOCK) &&
-				(p.getItemInHand().getType() == Material.STICK)) {
+			if (p.getItemInHand().getType() == Material.STICK) {
 				org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) b.getState().getData();
 				BlockFace face = d.getFacing();
 				CannonDispenser c = ImpactTNT.cannons.get(dispenser.getLocation());
@@ -118,15 +120,37 @@ public class ImpactTNTEvents implements Listener {
 					if (sneaking) {
 						c.setDirection(0);
 						c.setAngle(45);
+						c.setPower(ImpactTNT.DEFAULT_POWER);
 					} 
 				}
 				// Print out the current parameters of this cannon
 				p.sendMessage(ChatColor.GREEN + "Direction: " 
-							+ ChatColor.RED + String.format("%+03d", c.getDirection()) + "" 
-							+ ChatColor.GREEN + " degrees, Angle: "
-							+ ChatColor.RED + String.format("%02d", c.getAngle())     
-							+ ChatColor.GREEN + " degrees");
+							+ ChatColor.RED + String.format("%+03d", c.getDirection()) + " " 
+							+ ChatColor.GREEN + "degrees, Angle: "
+							+ ChatColor.RED + String.format("%02d", c.getAngle()) + " "     
+							+ ChatColor.GREEN + "degrees, Power: "
+							+ ChatColor.RED + String.format("%1.1f", c.getPower()));
+			
+			// Detect when player clicks the dispenser with empty hand, to change the power
+			} else if (p.getItemInHand().getType() == Material.AIR) {
+				CannonDispenser c = ImpactTNT.cannons.get(dispenser.getLocation());
+				boolean sneaking = p.isSneaking();
+				if (bf == BlockFace.UP) {
+					if (sneaking) {
+						c.setPower(c.getPower() - ImpactTNT.POWER_STEP);
+					} else {
+						c.setPower(c.getPower() + ImpactTNT.POWER_STEP);
+					}
+					// Print out the current parameters of this cannon
+					p.sendMessage(ChatColor.GREEN + "Direction: " 
+								+ ChatColor.RED + String.format("%+03d", c.getDirection()) + " " 
+								+ ChatColor.GREEN + "degrees, Angle: "
+								+ ChatColor.RED + String.format("%02d", c.getAngle()) + " "     
+								+ ChatColor.GREEN + "degrees, Power: "
+								+ ChatColor.RED + String.format("%1.1f", c.getPower()));
+				}
 			}
+			
 		}
 	}
 	
@@ -153,7 +177,6 @@ public class ImpactTNTEvents implements Listener {
 		ItemStack i = event.getItem();
 		Location loc = event.getBlock().getLocation();
 		final World world = event.getBlock().getWorld();
-		double speedFactor = 1.5;
 		final Location dispLocation = event.getBlock().getRelative(face).getLocation();
 		dispLocation.setY(dispLocation.getY() + 1);
 		// Safety radius squared (less complicated to calculate when srqt() left out)
@@ -178,7 +201,7 @@ public class ImpactTNTEvents implements Listener {
 			// Shoot the TNT from the dispenser, using the speedFactor as a modifier
 			// Also use this dispenser cannon's direction settings!
 			Vector v = calcVelocityVector(face, c.getDirection(), c.getAngle());
-			entity.setVelocity(v.multiply(speedFactor));
+			entity.setVelocity(v.multiply(c.getPower()));
 			d2.getInventory().removeItem(i);
 		}
 	}
