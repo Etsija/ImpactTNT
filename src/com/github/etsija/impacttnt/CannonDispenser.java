@@ -1,14 +1,20 @@
 package com.github.etsija.impacttnt;
 
-import org.bukkit.material.Dispenser;
-
-public class CannonDispenser extends Dispenser {
+public class CannonDispenser {
 	int direction;
 	int angle;
+	float power;
 	
 	public CannonDispenser(int dir, int angle) {
 		this.direction = dir;
 		this.angle = angle;
+		this.power = ImpactTNT.DEFAULT_POWER;
+	}
+	
+	public CannonDispenser(int dir, int angle, float power) {
+		this.direction = dir;
+		this.angle = angle;
+		this.power = power;
 	}
 		
 	public int getDirection() {
@@ -29,4 +35,12 @@ public class CannonDispenser extends Dispenser {
 			this.angle = angle;
 	}
 	
+	public float getPower() {
+		return this.power;
+	}
+	
+	public void setPower(float power) {
+		if ((power >= ImpactTNT.minPower) && (power <= ImpactTNT.maxPower))
+			this.power = power;
+	}
 }

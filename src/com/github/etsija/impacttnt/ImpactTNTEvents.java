@@ -1,7 +1,5 @@
 package com.github.etsija.impacttnt;
 
-import java.util.Iterator;
-import java.util.List;
 import java.util.logging.Logger;
 
 //import org.bukkit.ChatColor;
@@ -42,7 +40,6 @@ public class ImpactTNTEvents implements Listener {
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		final Player player = event.getPlayer();
 		final World world = player.getWorld();
-		double speedFactor = 1.5;
 		final Location handLocation = player.getLocation();
 		handLocation.setY(handLocation.getY() + 1);
 		// Safety radius squared (less complicated to calculate when srqt() left out)
@@ -59,7 +56,7 @@ public class ImpactTNTEvents implements Listener {
 			Entity entity = createTNT(world, handLocation, squaredSafetyDistance);
 			
 			// Throw the TNT, using the speedFactor as a modifier
-			entity.setVelocity(direction.multiply(speedFactor));
+			entity.setVelocity(direction.multiply(ImpactTNT.DEFAULT_POWER));
 			if (player.getGameMode() != GameMode.CREATIVE){
 				ItemStack is = player.getItemInHand();
 				if (is.getAmount() > 1)
