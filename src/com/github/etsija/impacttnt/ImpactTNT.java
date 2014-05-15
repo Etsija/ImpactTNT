@@ -2,7 +2,6 @@ package com.github.etsija.impacttnt;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -19,7 +18,9 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -29,11 +30,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class ImpactTNT extends JavaPlugin {
 	
+	public static final float DEFAULT_POWER = 1.5f;
+	public static final float POWER_STEP = 0.1f;
 	public static ImpactTNT impactTNT;
 	Logger _log = Logger.getLogger("Minecraft");
 	private PluginManager pm;
 	private final ImpactTNTEvents tntEvents = new ImpactTNTEvents();
 	public static HashMap<Location, CannonDispenser> cannons = new HashMap<Location, CannonDispenser>();	// Cannons Map; for persistence
+	FileConfiguration cannonsYML = null;
 	
 	public static boolean expOnImpact;		// Does the TNT explode when hitting something other than air?
 	public static int     fuseTicks;		// How many ticks until it explodes anyway
@@ -43,19 +47,28 @@ public class ImpactTNT extends JavaPlugin {
 	public static boolean dispenserCannon;	// Do the dispensers work as cannons, shooting out ImpactTNT?
 	public static int     maxSector;		// Maximum sector for the dispenser cannons
 	public static int     maxAngle;			// Maximum angle for the dispenser cannons
+	public static float   minPower;			// Minimum power of the ImpactTNT on cannon
+	public static float   maxPower;			// Maximum power of the ImpactTNT on cannon
 	
 	@Override
 	public void onEnable() {
 		pm = this.getServer().getPluginManager();
 		pm.registerEvents(tntEvents, this);
 		processConfigFile();
-		loadCannons();
+		File tmpFile = new File(this.getDataFolder(), "cannons.dat");
+		if (tmpFile.exists()) {
+			loadCannons();
+			tmpFile.delete();
+			_log.info("[ImpactTNT] Read in the dispenser cannons from the old datafile and deleted it.");
+			saveCannonsYML();
+		}
+		loadCannonsYML();
 		_log.info("[ImpactTNT] enabled.");
 	}
 
 	@Override
 	public void onDisable() {
-		saveCannons();
+		saveCannonsYML();
 		_log.info("[ImpactTNT] disabled.");
 	}
 
@@ -75,6 +88,8 @@ public class ImpactTNT extends JavaPlugin {
 		defParams.put("general.dispensercannon", true);
 		defParams.put("general.maxsector", 45);
 		defParams.put("general.maxangle", 60);
+		defParams.put("general.minpower", 1.5);
+		defParams.put("general.maxpower", 3.0);
 		
 		// If config does not include a default parameter, add it
 		for (final Entry<String, Object> e : defParams.entrySet())
@@ -93,8 +108,47 @@ public class ImpactTNT extends JavaPlugin {
 		dispenserCannon = getConfig().getBoolean("general.dispensercannon");
 		maxSector       = getConfig().getInt("general.maxsector");
 		maxAngle        = getConfig().getInt("general.maxangle");
+		minPower        = (float) getConfig().getDouble("general.minPower");
+		maxPower        = (float) getConfig().getDouble("general.maxpower");
 	}		
 
+	// Save the list of dispenser cannons into a YML config file
+	public void saveCannonsYML() {
+		File saveFile = new File(this.getDataFolder(), "cannons.yml");
+		
+		if (cannons.size() == 0) return;
+		
+		// In case the savefile doesn't exist, create it
+		if (!saveFile.exists()) {
+			try {
+				saveFile.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		cannonsYML = new YamlConfiguration();
+		int i = 1;
+		for (Map.Entry<Location, CannonDispenser> entry : cannons.entrySet()) {
+			Location        loc = entry.getKey();
+			CannonDispenser   c = entry.getValue();
+			ConfigurationSection cs = cannonsYML.createSection(Integer.toString(i));
+			cs.set("world", loc.getWorld().getName());
+			cs.set("x", loc.getX());
+			cs.set("y", loc.getY());
+			cs.set("z", loc.getZ());
+			cs.set("direction", c.getDirection());
+			cs.set("angle", c.getAngle());
+			cs.set("power", c.getPower());
+			i++;
+		}
+		try {
+            cannonsYML.save(saveFile);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+		_log.info("[ImpactTNT] Saved successfully " + i + " dispenser cannons.");
+	}
+	
 	// Save the list of dispenser cannons into a datafile for persistence
 	public void saveCannons() {
 		File saveFile = new File(this.getDataFolder(), "cannons.dat");
@@ -132,6 +186,40 @@ public class ImpactTNT extends JavaPlugin {
 		}	
 	}
 	
+	// Load the dispenser cannons from an YML datafile
+	public void loadCannonsYML() {
+		File saveFile = new File(this.getDataFolder(), "cannons.yml");
+		cannonsYML = new YamlConfiguration();
+		if (saveFile.exists()) {
+	        try {
+	            cannonsYML.load(saveFile);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+		} else {
+			return;
+		}
+		int i = 1;
+		while (true) {
+			ConfigurationSection cs = cannonsYML.getConfigurationSection(Integer.toString(i));
+			if (cs == null) {
+				_log.info("[ImpactTNT] Read in successfully " + (i-1) + " dispenser cannons.");
+				return;
+			}
+			World w = Bukkit.getServer().getWorld(cs.getString("world"));
+			Double x = cs.getDouble("x");
+			Double y = cs.getDouble("y");
+			Double z = cs.getDouble("z");
+			int direction = cs.getInt("direction");
+			int angle     = cs.getInt("angle");
+			float power = (float) cs.getDouble("power");
+			Location loc = new Location(w, x, y, z);
+			CannonDispenser cannon = new CannonDispenser(direction, angle, power);
+			cannons.put(loc, cannon);
+			i++;
+		}
+	}
+	
 	// Load the dispenser cannons from a datafile
 	public void loadCannons() {
 		File saveFile = new File(this.getDataFolder(), "cannons.dat");
@@ -155,10 +243,6 @@ public class ImpactTNT extends JavaPlugin {
 					CannonDispenser cannon = new CannonDispenser(direction, angle);
 					cannons.put(loc, cannon);
 				}
-				_log.info("[ImpactTNT] Read in successfully " + count + " dispenser cannons.");
-			} catch (FileNotFoundException e) {
-				_log.info("Could not locate cannons.dat");
-				e.printStackTrace();
 			} catch (IOException e) {
 				_log.info("IO error when trying to read cannons.dat");
 				e.printStackTrace();
@@ -225,8 +309,8 @@ public class ImpactTNT extends JavaPlugin {
 				
 				// Save the cannon data
 				} else if (args[0].equalsIgnoreCase("save")) {
-					saveCannons();
-					player.sendMessage(ChatColor.GREEN + "" + cannons.size() + " dispenser cannons saved to cannons.dat");
+					saveCannonsYML();
+					player.sendMessage(ChatColor.GREEN + "" + cannons.size() + " dispenser cannons saved to cannons.yml");
 					return true;
 				
 				// Change the maximum sector into (-maxSector...maxSector)
