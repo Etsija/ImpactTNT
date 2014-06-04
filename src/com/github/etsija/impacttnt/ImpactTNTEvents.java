@@ -170,6 +170,7 @@ public class ImpactTNTEvents implements Listener {
 	// Handles the dispenser dispense event, when it has TNT to dispense
 	@EventHandler
 	public void onDispense(final BlockDispenseEvent event) {
+		if (event.getBlock().getType() != Material.DISPENSER) return;
 		CannonDispenser c = null;
 		org.bukkit.material.Dispenser d = (org.bukkit.material.Dispenser) event.getBlock().getState().getData();
 		org.bukkit.block.Dispenser   d2 = (org.bukkit.block.Dispenser)    event.getBlock().getState();
